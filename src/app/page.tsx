@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, JSX } from 'react';
 import {
   Play,
   Pause,
@@ -19,23 +19,46 @@ import {
   BarChart2,
 } from 'lucide-react';
 
+type TimerMode = 'work' | 'shortBreak' | 'longBreak';
+
+interface Task {
+  id: number;
+  text: string;
+  completed: boolean;
+  pomodorosEstimated: number;
+  pomodorosSpent: number;
+  createdAt: Date;
+}
+
+type ThemeType = 'gradient' | 'dark' | 'ocean' | 'forest' | 'sunset';
+
+interface TimerModeConfig {
+  duration: number;
+  label: string;
+  color: string;
+  icon: JSX.Element;
+  description: string;
+}
+
 const PomodoroTimer = () => {
   // Timer state
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
-  const [mode, setMode] = useState('work');
+  type TimerMode = 'work' | 'shortBreak' | 'longBreak';
+  const [mode, setMode] = useState<TimerMode>('work');
   const [pomodoroCount, setPomodoroCount] = useState(0);
   const [sessionCount, setSessionCount] = useState({ today: 0, total: 0 });
 
   // Task state
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [newTask, setNewTask] = useState('');
-  const [activeTask, setActiveTask] = useState(null);
+  const [activeTask, setActiveTask] = useState<number | null>(null);
 
   // UI state
   const [showSettings, setShowSettings] = useState(false);
   const [showStats, setShowStats] = useState(false);
-  const [theme, setTheme] = useState('gradient');
+  type ThemeType = 'gradient' | 'dark' | 'ocean' | 'forest' | 'sunset';
+  const [theme, setTheme] = useState<ThemeType>('gradient');
   const [soundEnabled, setSoundEnabled] = useState(true);
 
   // Settings state
@@ -50,8 +73,8 @@ const PomodoroTimer = () => {
     notifications: true,
   });
 
-  const intervalRef = useRef(null);
-  const notificationRef = useRef(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const notificationRef = useRef<Notification | null>(null);
 
   const themes = {
     gradient: {
@@ -119,14 +142,20 @@ const PomodoroTimer = () => {
         setTimeLeft(prev => prev - 1);
       }, 1000);
     } else {
-      clearInterval(intervalRef.current);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
 
       if (timeLeft === 0 && isRunning) {
         handleTimerComplete();
       }
     }
 
-    return () => clearInterval(intervalRef.current);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, [isRunning, timeLeft, mode, pomodoroCount]);
 
   const handleTimerComplete = () => {
@@ -179,8 +208,7 @@ const PomodoroTimer = () => {
     if (!soundEnabled) return;
 
     try {
-      const audioContext = new (window.AudioContext ||
-        window.webkitAudioContext)();
+      const audioContext = new AudioContext();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
 
@@ -220,7 +248,7 @@ const PomodoroTimer = () => {
     }
   };
 
-  const switchMode = (newMode, autoStart = false) => {
+  const switchMode = (newMode: TimerMode, autoStart = false) => {
     setMode(newMode);
     setTimeLeft(modes[newMode].duration);
     if (autoStart) {
@@ -228,7 +256,7 @@ const PomodoroTimer = () => {
     }
   };
 
-  const formatTime = seconds => {
+  const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs
@@ -267,7 +295,7 @@ const PomodoroTimer = () => {
     }
   };
 
-  const toggleTask = id => {
+  const toggleTask = (id: number) => {
     setTasks(prev =>
       prev.map(task =>
         task.id === id ? { ...task, completed: !task.completed } : task
@@ -275,16 +303,16 @@ const PomodoroTimer = () => {
     );
   };
 
-  const deleteTask = id => {
+  const deleteTask = (id: number) => {
     setTasks(prev => prev.filter(task => task.id !== id));
     if (activeTask === id) setActiveTask(null);
   };
 
-  const setTaskActive = id => {
+  const setTaskActive = (id: number) => {
     setActiveTask(activeTask === id ? null : id);
   };
 
-  const updateTaskPomodoros = (id, estimate) => {
+  const updateTaskPomodoros = (id: number, estimate?: number) => {
     if (estimate) {
       setTasks(prev =>
         prev.map(task =>
@@ -495,7 +523,7 @@ const PomodoroTimer = () => {
               {Object.entries(modes).map(([key, { label, icon }]) => (
                 <button
                   key={key}
-                  onClick={() => switchMode(key)}
+                  onClick={() => switchMode(key as TimerMode)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                     mode === key
                       ? 'bg-white text-slate-900 shadow-lg'
@@ -895,7 +923,7 @@ const PomodoroTimer = () => {
                   {Object.entries(themes).map(([key, { accent }]) => (
                     <button
                       key={key}
-                      onClick={() => setTheme(key)}
+                      onClick={() => setTheme(key as ThemeType)}
                       className={`p-1.5 rounded-full ring-2 transition-all duration-200 ${
                         theme === key
                           ? 'ring-purple-500'
