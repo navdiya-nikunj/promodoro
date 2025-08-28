@@ -46,6 +46,7 @@ const PomodoroTimer = () => {
   const [isRunning, setIsRunning] = useState(false);
   type TimerMode = 'work' | 'shortBreak' | 'longBreak';
   const [mode, setMode] = useState<TimerMode>('work');
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [pomodoroCount, setPomodoroCount] = useState(0);
   const [sessionCount, setSessionCount] = useState({ today: 0, total: 0 });
 
@@ -187,23 +188,46 @@ const PomodoroTimer = () => {
     }
   };
 
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window) {
+      try {
+        const permission = await Notification.requestPermission();
+        setNotificationPermission(permission);
+      } catch (err) {
+        console.warn('Notification permission request failed:', err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
+
   const showNotification = () => {
     if (settings.notifications && 'Notification' in window) {
       if (Notification.permission === 'granted') {
-        const notification = new Notification(
-          `${modes[mode].label} Complete!`,
-          {
-            body: mode === 'work' ? 'Time for a break!' : 'Ready to focus?',
-            icon: '🍅',
-          }
-        );
-        notificationRef.current = notification;
+        const title = `${modes[mode].label} Complete!`;
+        const options = {
+          body: mode === 'work' 
+            ? 'Time for a break! Take some time to relax.' 
+            : 'Break time is over. Focus time on',
+          icon: '/logo.png',
+          badge: '/logo.png',
+          tag: 'pomodoro-notification',
+          renotify: true,
+          requireInteraction: true,
+        };
+          const notification = new Notification(title, options);
+          notificationRef.current = notification;
       } else if (Notification.permission !== 'denied') {
         Notification.requestPermission();
       }
     }
   };
 
+ 
   const playNotificationSound = () => {
     if (!soundEnabled) return;
 
@@ -705,6 +729,19 @@ const PomodoroTimer = () => {
             </div>
 
             <div className='space-y-6'>
+              {/* Notification Permission */}
+              {'Notification' in window && notificationPermission !== 'granted' && (
+                <div className='bg-yellow-500/20 p-4 rounded-lg'>
+                  <p className='text-yellow-300 mb-2'>Enable notifications to get alerts when your timer completes.</p>
+                  <button
+                    onClick={requestNotificationPermission}
+                    className='bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition-colors'
+                  >
+                    Enable Notifications
+                  </button>
+                </div>
+              )}
+
               {/* Timer Settings */}
               <div>
                 <h3 className='text-lg font-semibold text-white mb-4 flex items-center gap-2'>
